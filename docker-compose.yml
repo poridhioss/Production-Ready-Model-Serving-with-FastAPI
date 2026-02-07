@@ -17,6 +17,7 @@ services:
       retries: 5
     networks:
       - sentiment_network
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -30,16 +31,29 @@ services:
       retries: 5
     networks:
       - sentiment_network
+    restart: unless-stopped
 
-  api:
+  api1:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: sentiment_api
-    env_file:
-      - .env
+    container_name: sentiment_api1
+    environment:
+      - INSTANCE_ID=API-1
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=${DATABASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_URL=${REDIS_URL}
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./backend:/app/backend
       - ./models:/app/models
@@ -54,7 +68,46 @@ services:
         condition: service_healthy
     networks:
       - sentiment_network
-    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+
+  api2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sentiment_api2
+    environment:
+      - INSTANCE_ID=API-2
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=${DATABASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_URL=${REDIS_URL}
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./backend:/app/backend
+      - ./models:/app/models
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+      - ./init_db.py:/app/init_db.py
+      - ./train_model.py:/app/train_model.py
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sentiment_network
+    restart: unless-stopped
+    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 
   nginx:
     image: nginx:alpine
@@ -66,9 +119,11 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
-      - api
+      - api1
+      - api2
     networks:
       - sentiment_network
+    restart: unless-stopped
 
   celery_worker:
     build:
@@ -87,6 +142,7 @@ services:
         condition: service_healthy
     networks:
       - sentiment_network
+    restart: unless-stopped
     command: celery -A backend.app.main.celery_app worker --loglevel=info
 
 volumes:
