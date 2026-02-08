@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Any
 from datetime import datetime
 import joblib
 import time
@@ -102,7 +102,7 @@ class BatchSentimentRequest(BaseModel):
 class TaskStatusResponse(BaseModel):
     task_id: str
     status: str
-    result: Optional[dict] = None
+    result: Optional[Any] = None  # Changed from dict to Any to accept list or dict
     error_message: Optional[str] = None
     created_at: datetime
     updated_at: datetime
