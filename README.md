@@ -1,0 +1,2 @@
+This is a Production grade Machine Learning Model Serving project using FastAPI. It concludes TLS, Rate Limiting, and Load Balancing using Nginx to make the service more fault tolerant and scale. Additionally, Alembic migration with SQLAlchemy as ORM is used to keep the database updated which increases the reliability of the application. With the security concerns in production API endpoints, the project integrated JWT authentication.
+
